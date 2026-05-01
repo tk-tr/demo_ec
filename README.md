@@ -1,6 +1,7 @@
 # Docker EC Sample
 
 Next.js + Hono + PostgreSQL で構築した、Docker起動可能なECサンプルです。
+APM（New Relic）を導入済み。
 
 ## Services
 
