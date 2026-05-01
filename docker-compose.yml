@@ -1,0 +1,69 @@
+services:
+  web:
+    build:
+      context: ./apps/web
+      target: dev
+    container_name: ec-web
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+      - API_BASE_URL=http://api:3000
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-}
+      - NEW_RELIC_APP_NAME=EC Web
+      - NEW_RELIC_LOG_LEVEL=info
+      - NEW_RELIC_LOG=stdout
+      - NODE_OPTIONS=--require newrelic
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ./apps/api
+      target: dev
+    container_name: ec-api
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://ec_user:ec_pass@db:5432/ec_db?schema=public
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER:-admin}
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS:-password}
+      - CORS_ORIGIN=http://localhost:3001
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-}
+      - NEW_RELIC_APP_NAME=EC API
+      - NEW_RELIC_LOG_LEVEL=info
+      - NEW_RELIC_LOG=stdout
+      - NODE_OPTIONS=--require newrelic
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+    command: sh -c "NODE_OPTIONS= npm run prisma:generate && NODE_OPTIONS= npx prisma migrate deploy && NODE_OPTIONS= npm run prisma:seed && npm run dev"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: ec-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=ec_user
+      - POSTGRES_PASSWORD=ec_pass
+      - POSTGRES_DB=ec_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ec_user -d ec_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pg_data:

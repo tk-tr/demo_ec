@@ -1,0 +1,11 @@
+node_modules/
+apps/*/node_modules/
+dist/
+apps/*/dist/
+.next/
+apps/*/.next/
+.env
+.env.local
+.env*.local
+npm-debug.log*
+*.log
